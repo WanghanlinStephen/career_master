@@ -54,23 +54,52 @@ const Home = ({ translations }) => {
           to achieve your professional goals
         </Typography>
 
-        <Button
-          variant="contained"
-          size="large"
-          onClick={() => navigate('/editor')}
-          sx={{
-            fontSize: { xs: '1.1rem', md: '1.25rem' },
-            py: 2,
-            px: 6,
-            backgroundColor: '#FF6B35',
-            color: '#020816',
-            '&:hover': {
-              backgroundColor: 'rgba(255, 107, 53, 0.8)',
-            }
-          }}
-        >
-          Start Planning
-        </Button>
+        <Box sx={{ 
+          display: 'flex', 
+          flexDirection: { xs: 'column', sm: 'row' }, 
+          gap: 2, 
+          alignItems: 'center',
+          justifyContent: 'center'
+        }}>
+          <Button
+            variant="contained"
+            size="large"
+            onClick={() => navigate('/editor')}
+            sx={{
+              fontSize: { xs: '1.1rem', md: '1.25rem' },
+              py: 2,
+              px: 6,
+              backgroundColor: '#FF6B35',
+              color: '#020816',
+              minWidth: { xs: '200px', sm: '180px' },
+              '&:hover': {
+                backgroundColor: 'rgba(255, 107, 53, 0.8)',
+              }
+            }}
+          >
+            {translations.startButton}
+          </Button>
+          
+          <Button
+            variant="outlined"
+            size="large"
+            onClick={() => navigate('/view-my-plan')}
+            sx={{
+              fontSize: { xs: '1.1rem', md: '1.25rem' },
+              py: 2,
+              px: 6,
+              borderColor: 'rgba(255, 107, 53, 0.5)',
+              color: '#FF6B35',
+              minWidth: { xs: '200px', sm: '180px' },
+              '&:hover': {
+                borderColor: '#FF6B35',
+                backgroundColor: 'rgba(255, 107, 53, 0.1)',
+              }
+            }}
+          >
+            {translations.viewMyPlanButton}
+          </Button>
+        </Box>
       </Box>
 
       <Box sx={{ mt: 12 }}>

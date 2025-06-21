@@ -139,12 +139,14 @@ const ResumeEditor = ({ translations }) => {
     {
       id: 1,
       type: 'assistant',
-      content: 'Hello! I am your career transition planning assistant. Please tell me about your current career background, skills, and the target career you want to transition to. I will help you create a personalized transition plan.',
+      content: 'Hello! I am your career transition planning assistant. Let me confirm your information first:',
       timestamp: new Date()
     }
   ]);
   const [inputMessage, setInputMessage] = useState('');
   const [isTyping, setIsTyping] = useState(false);
+  const [chatStep, setChatStep] = useState('initial'); // 'initial', 'plan_generated', 'confirmed'
+  const [generatedPlan, setGeneratedPlan] = useState(null);
   const messagesEndRef = useRef(null);
 
   // Add personal information form state
@@ -177,17 +179,71 @@ const ResumeEditor = ({ translations }) => {
     setInputMessage('');
     setIsTyping(true);
 
-    // Simulate AI reply
-    setTimeout(() => {
-      const assistantMessage = {
-        id: Date.now() + 1,
-        type: 'assistant',
-        content: generateAIResponse(inputMessage),
-        timestamp: new Date()
-      };
-      setMessages(prev => [...prev, assistantMessage]);
-      setIsTyping(false);
-    }, 1000 + Math.random() * 2000); // 1-3 seconds random delay
+    // Check if we're in plan modification mode
+    if (chatStep === 'initial' && generatedPlan) {
+      // User is modifying the plan, generate new plan based on their input
+      setTimeout(() => {
+        // Get target position information
+        const targetPosition = jobCategories.find(c => c.id === selectedCategory)?.name;
+        const targetJob = jobCategories.find(c => c.id === selectedCategory)?.subCategories.find(j => j.value === selectedJob)?.name;
+        const fullTargetPosition = `${targetPosition} - ${targetJob}`;
+        
+        const newPlan = {
+          title: `Your Updated Career Transition Plan to ${targetJob}`,
+          summary: `Based on your feedback: "${inputMessage}", here's your revised transition plan for ${targetJob}:`,
+          steps: [
+            "Month 1: Focus on the specific skills you mentioned",
+            "Month 2-3: Build projects in your target area",
+            "Month 4-5: Network and apply for positions",
+            "Month 6: Finalize transition and onboarding"
+          ],
+          timeline: "6 months",
+          estimatedSalary: "$90,000 - $130,000",
+          skillsToDevelop: ["Updated Skills", "Based on your feedback", "Customized approach"]
+        };
+        
+        setGeneratedPlan(newPlan);
+        setChatStep('plan_generated');
+        
+        // Add new plan to chat
+        const planMessage = {
+          id: Date.now() + 1,
+          type: 'assistant',
+          content: `Here's your updated career transition plan:
+
+**${newPlan.title}**
+
+**Target Position:** ${fullTargetPosition}
+
+${newPlan.summary}
+
+**Key Steps:**
+${newPlan.steps.map((step, index) => `${index + 1}. ${step}`).join('\n')}
+
+**Timeline:** ${newPlan.timeline}
+**Estimated Salary Range:** ${newPlan.estimatedSalary}
+
+**Skills to Develop:** ${newPlan.skillsToDevelop.join(', ')}
+
+Please review this updated plan. If you're satisfied, click "Confirm Plan". If you'd like further modifications, let me know what you'd like to change.`,
+          timestamp: new Date()
+        };
+        setMessages(prev => [...prev, planMessage]);
+        setIsTyping(false);
+      }, 2000);
+    } else {
+      // Regular chat mode - generate random response
+      setTimeout(() => {
+        const assistantMessage = {
+          id: Date.now() + 1,
+          type: 'assistant',
+          content: generateAIResponse(inputMessage),
+          timestamp: new Date()
+        };
+        setMessages(prev => [...prev, assistantMessage]);
+        setIsTyping(false);
+      }, 1000 + Math.random() * 2000); // 1-3 seconds random delay
+    }
   };
 
   // Generate AI response
@@ -212,9 +268,95 @@ const ResumeEditor = ({ translations }) => {
     }
   };
 
+  // Handle plan confirmation
+  const handleConfirmPlan = () => {
+    setChatStep('confirmed');
+    // Navigate to result page
+    const mockImageUrl = 'https://auto-resume-storage.s3.us-east-2.amazonaws.com/processed.png';
+    navigate(`/result?preview_html_url=${encodeURIComponent(mockImageUrl)}`);
+  };
+
+  // Handle plan regeneration
+  const handleRegeneratePlan = () => {
+    setChatStep('initial');
+    setGeneratedPlan(null);
+    // Add a message asking for more specific requirements
+    const assistantMessage = {
+      id: Date.now(),
+      type: 'assistant',
+      content: "I understand you'd like to modify the plan. Please tell me what specific aspects you'd like to change or what additional requirements you have.",
+      timestamp: new Date()
+    };
+    setMessages(prev => [...prev, assistantMessage]);
+  };
+
+  // Generate plan from backend
+  const generatePlanFromBackend = async () => {
+    try {
+      setLoading(true);
+      
+      // Get target position information
+      const targetPosition = jobCategories.find(c => c.id === selectedCategory)?.name;
+      const targetJob = jobCategories.find(c => c.id === selectedCategory)?.subCategories.find(j => j.value === selectedJob)?.name;
+      const fullTargetPosition = `${targetPosition} - ${targetJob}`;
+      
+      // Simulate backend call for plan generation
+      setTimeout(() => {
+        const mockPlan = {
+          title: `Your Personalized Career Transition Plan to ${targetJob}`,
+          summary: `Based on your background and interest in transitioning to ${targetJob}, here's your 6-month transition plan:`,
+          steps: [
+            "Month 1-2: Learn Python and machine learning fundamentals",
+            "Month 3-4: Build AI projects and contribute to open source",
+            "Month 5-6: Network with AI professionals and apply for positions"
+          ],
+          timeline: "6 months",
+          estimatedSalary: "$80,000 - $120,000",
+          skillsToDevelop: ["Python", "Machine Learning", "Deep Learning", "Data Analysis"]
+        };
+        
+        setGeneratedPlan(mockPlan);
+        setChatStep('plan_generated');
+        
+        // Add plan to chat with proper formatting
+        const planMessage = {
+          id: Date.now() + 1,
+          type: 'assistant',
+          content: `Here's your personalized career transition plan:
+
+**${mockPlan.title}**
+
+**Target Position:** ${fullTargetPosition}
+
+${mockPlan.summary}
+
+**Key Steps:**
+${mockPlan.steps.map((step, index) => `${index + 1}. ${step}`).join('\n')}
+
+**Timeline:** ${mockPlan.timeline}
+**Estimated Salary Range:** ${mockPlan.estimatedSalary}
+
+**Skills to Develop:** ${mockPlan.skillsToDevelop.join(', ')}
+
+Please review this plan. If you're satisfied, click "Confirm Plan". If you'd like modifications, let me know what you'd like to change.`,
+          timestamp: new Date()
+        };
+        setMessages(prev => [...prev, planMessage]);
+        setLoading(false);
+      }, 3000);
+      
+    } catch (error) {
+      setError('Failed to generate plan, please try again');
+      setLoading(false);
+    }
+  };
+
   // Render message bubble
   const renderMessage = (message) => {
     const isUser = message.type === 'user';
+    
+    // Split content by newlines and render each line
+    const contentLines = message.content.split('\n');
     
     return (
       <Box
@@ -258,8 +400,23 @@ const ResumeEditor = ({ translations }) => {
               wordBreak: 'break-word'
             }}
           >
-            <Typography variant="body1">
-              {message.content}
+            <Typography variant="body1" component="div">
+              {contentLines.map((line, index) => (
+                <div key={index}>
+                  {line.startsWith('**') && line.endsWith('**') ? (
+                    <strong style={{ color: '#FF6B35' }}>
+                      {line.replace(/\*\*/g, '')}
+                    </strong>
+                  ) : line.startsWith('**') ? (
+                    <strong style={{ color: '#FF6B35' }}>
+                      {line.replace(/\*\*/g, '')}
+                    </strong>
+                  ) : (
+                    line
+                  )}
+                  {index < contentLines.length - 1 && <br />}
+                </div>
+              ))}
             </Typography>
             <Typography 
               variant="caption" 
@@ -577,6 +734,20 @@ const ResumeEditor = ({ translations }) => {
         return;
       }
       setFile(uploadedFile);
+      
+      // Read file content if it's a text-based file
+      if (uploadedFile.type === 'application/pdf') {
+        // For PDF files, just store the file reference without content
+        setResumeText(`PDF file: ${uploadedFile.name}`);
+      } else {
+        // For Word documents, read as text
+        const reader = new FileReader();
+        reader.onload = (e) => {
+          setResumeText(e.target.result);
+        };
+        reader.readAsText(uploadedFile);
+      }
+      
       setShowResumeForm(false);
       setSnackbar({
         open: true,
@@ -657,14 +828,56 @@ const ResumeEditor = ({ translations }) => {
       }
     }
     
-    if (activeStep === steps.length - 1) {
-      // Convert chat history to job description
-      const chatContent = messages
-        .filter(msg => msg.type === 'user')
-        .map(msg => msg.content)
-        .join('\n');
-      setCustomText(chatContent);
-      handleSubmit();
+    if (activeStep === 1) {
+      // Move to Smart Chat step and show confirmation message only
+      setActiveStep((prevActiveStep) => prevActiveStep + 1);
+      // Show confirmation message after a short delay
+      setTimeout(() => {
+        // Prepare resume content for display
+        let resumeContent = '';
+        if (file) {
+          resumeContent = `**Uploaded File:** ${file.name}\n\n`;
+          if (resumeText && !resumeText.startsWith('PDF file:')) {
+            // This is actual text content from Word document
+            resumeContent += `**Resume Content:**\n${resumeText}\n\n`;
+          }
+        } else if (resumeText) {
+          // Check if it's JSON format (form data) or actual resume text
+          try {
+            const parsed = JSON.parse(resumeText);
+            if (parsed.timeCommitment || parsed.expectation) {
+              // This is form data JSON
+              resumeContent = `**Form Data:**\nTime Commitment: ${parsed.timeCommitment || 'Not specified'}\nExpectations: ${parsed.expectation || 'Not specified'}\n\n`;
+            } else {
+              // This is actual resume text
+              resumeContent = `**Resume Content:**\n${resumeText}\n\n`;
+            }
+          } catch (e) {
+            // This is actual resume text
+            resumeContent = `**Resume Content:**\n${resumeText}\n\n`;
+          }
+        }
+
+        const confirmationMessage = {
+          id: Date.now(),
+          type: 'assistant',
+          content: `I have received your information:
+
+**Target Position:** ${jobCategories.find(c => c.id === selectedCategory)?.name} - ${jobCategories.find(c => c.id === selectedCategory)?.subCategories.find(j => j.value === selectedJob)?.name}
+
+**Time Commitment:** ${formData.timeCommitment || 'Not specified'}
+
+**Expectations:** ${formData.expectation || 'Not specified'}
+
+${resumeContent}Please confirm and generate plans.`,
+          timestamp: new Date()
+        };
+        setMessages(prev => [...prev, confirmationMessage]);
+      }, 1000);
+    } else if (activeStep === steps.length - 1) {
+      // This is the Smart Chat step, don't auto-submit
+      // Let user interact with the chat
+      return;
     } else {
       setActiveStep((prevActiveStep) => prevActiveStep + 1);
     }
@@ -904,6 +1117,66 @@ const ResumeEditor = ({ translations }) => {
             }}>
               {renderChatInterface()}
             </Card>
+            
+            {/* Action buttons for plan confirmation */}
+            {chatStep === 'plan_generated' && (
+              <Box sx={{ display: 'flex', justifyContent: 'center', gap: 2, mt: 3 }}>
+                <Button
+                  variant="outlined"
+                  onClick={handleRegeneratePlan}
+                  sx={{
+                    borderColor: 'rgba(255, 107, 53, 0.5)',
+                    color: '#FF6B35',
+                    '&:hover': {
+                      borderColor: '#FF6B35',
+                      backgroundColor: 'rgba(255, 107, 53, 0.1)',
+                    }
+                  }}
+                >
+                  Modify Plan
+                </Button>
+                <Button
+                  variant="contained"
+                  onClick={handleConfirmPlan}
+                  sx={{
+                    backgroundColor: '#FF6B35',
+                    color: '#020816',
+                    '&:hover': {
+                      backgroundColor: 'rgba(255, 107, 53, 0.8)',
+                    }
+                  }}
+                >
+                  Confirm Plan
+                </Button>
+              </Box>
+            )}
+            
+            {/* Generate Plan button - only show when not in plan_generated state */}
+            {activeStep === steps.length - 1 && chatStep !== 'plan_generated' && (
+              <Box sx={{ display: 'flex', justifyContent: 'center', mt: 3 }}>
+                <Button
+                  variant="contained"
+                  onClick={generatePlanFromBackend}
+                  disabled={loading}
+                  sx={{
+                    backgroundColor: '#FF6B35',
+                    color: '#020816',
+                    px: 4,
+                    py: 1.5,
+                    fontSize: '1.1rem',
+                    '&:hover': {
+                      backgroundColor: 'rgba(255, 107, 53, 0.8)',
+                    },
+                    '&:disabled': {
+                      backgroundColor: 'rgba(255, 107, 53, 0.3)',
+                      color: 'rgba(255, 255, 255, 0.5)',
+                    }
+                  }}
+                >
+                  {loading ? 'Generating Plan...' : 'Generate Plan'}
+                </Button>
+              </Box>
+            )}
           </Box>
         );
       default:
@@ -956,22 +1229,24 @@ const ResumeEditor = ({ translations }) => {
           >
             Previous Step
           </Button>
-          <Button
-            variant="contained"
-            onClick={handleNext}
-            disabled={
-              (activeStep === 0 && !selectedJob) ||
-              loading
-            }
-            sx={{
-              backgroundColor: '#1976d2',
-              '&:hover': {
-                backgroundColor: '#1565c0'
+          {activeStep !== steps.length - 1 && (
+            <Button
+              variant="contained"
+              onClick={handleNext}
+              disabled={
+                (activeStep === 0 && !selectedJob) ||
+                loading
               }
-            }}
-          >
-            {activeStep === steps.length - 1 ? 'Generate Plan' : 'Next Step'}
-          </Button>
+              sx={{
+                backgroundColor: '#1976d2',
+                '&:hover': {
+                  backgroundColor: '#1565c0'
+                }
+              }}
+            >
+              {activeStep === steps.length - 2 ? 'Generate Plan' : 'Next Step'}
+            </Button>
+          )}
         </Box>
       </Box>
 

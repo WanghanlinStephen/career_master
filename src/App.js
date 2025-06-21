@@ -16,6 +16,7 @@ import Profile from './components/Profile';
 import Vip from './components/Vip'
 import PaymentMethod from './components/PaymentMethod';
 import UserGuide from './components/UserGuide';
+import ViewMyPlan from './components/ViewMyPlan';
 
 const createAppTheme = (mode) =>
   createTheme({
@@ -83,6 +84,7 @@ const translations = {
     homeTitle: 'AI驱动的职业转型规划',
     homeDescription: '制定个性化职业转型计划，实现职业目标',
     startButton: '开始规划',
+    viewMyPlanButton: '查看我的计划',
     switchLanguage: '切换到 English',
     editorTitle: '职业转型规划',
     resumeTextLabel: '个人信息',
@@ -116,6 +118,7 @@ const translations = {
     homeTitle: 'AI-Powered Career Transition Planning',
     homeDescription: 'Create personalized career transition plans to achieve your professional goals',
     startButton: 'Start Planning',
+    viewMyPlanButton: 'View My Plan',
     switchLanguage: 'Switch to 中文',
     editorTitle: 'Career Transition Planning',
     resumeTextLabel: 'Personal Information',
@@ -185,6 +188,7 @@ function App() {
               <Route path="/" element={<Home translations={currentTranslations} />} />
               <Route path="/editor" element={<ResumeEditor translations={currentTranslations} />} />
               <Route path="/result" element={<ResumeResult translations={currentTranslations} />} />
+              <Route path="/view-my-plan" element={<ViewMyPlan translations={currentTranslations} />} />
               <Route path="/user-guide" element={<UserGuide />} />
               <Route path="/signin" element={<SignIn translations={currentTranslations} setIsAuthenticated={setIsAuthenticated}/>} />
               <Route path="/signup" element={<SignUp translations={currentTranslations} setIsAuthenticated={setIsAuthenticated}/>} />
