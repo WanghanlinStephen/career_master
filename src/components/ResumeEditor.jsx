@@ -272,9 +272,30 @@ Please review this updated plan. If you're satisfied, click "Confirm Plan". If y
   // Handle plan confirmation
   const handleConfirmPlan = () => {
     setChatStep('confirmed');
-    // Navigate to result page
-    const mockImageUrl = 'https://auto-resume-storage.s3.us-east-2.amazonaws.com/processed.png';
-    navigate(`/result?preview_html_url=${encodeURIComponent(mockImageUrl)}`);
+    
+    // 保存生成的计划到 localStorage，这样 view-my-plan 页面可以访问
+    if (generatedPlan) {
+      const planData = {
+        ...generatedPlan,
+        targetPosition: jobCategories.find(c => c.id === selectedCategory)?.name,
+        targetJob: jobCategories.find(c => c.id === selectedCategory)?.subCategories.find(j => j.value === selectedJob)?.name,
+        timeCommitment: formData.timeCommitment,
+        expectations: formData.expectation,
+        createdAt: new Date().toISOString(),
+        status: 'active'
+      };
+      
+      // 保存到 localStorage
+      localStorage.setItem('currentPlan', JSON.stringify(planData));
+      
+      // 也可以保存到计划历史中
+      const existingPlans = JSON.parse(localStorage.getItem('planHistory') || '[]');
+      existingPlans.unshift(planData);
+      localStorage.setItem('planHistory', JSON.stringify(existingPlans));
+    }
+    
+    // 跳转到 view-my-plan 页面
+    navigate('/view-my-plan');
   };
 
   // Handle plan regeneration

@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   Container,
   Typography,
@@ -16,7 +16,8 @@ import {
   Grid,
   Card,
   CardContent,
-  Collapse
+  Collapse,
+  Chip
 } from '@mui/material';
 import SendIcon from '@mui/icons-material/Send';
 import AssignmentIcon from '@mui/icons-material/Assignment';
@@ -171,6 +172,51 @@ const ViewMyPlan = () => {
   const [draggedItem, setDraggedItem] = useState(null);
   const [isChatOpen, setIsChatOpen] = useState(false);
   const [expandedItems, setExpandedItems] = useState(new Set());
+  const [currentPlan, setCurrentPlan] = useState(null);
+
+  // 读取从 ResumeEditor 传递过来的计划数据
+  useEffect(() => {
+    const savedPlan = localStorage.getItem('currentPlan');
+    if (savedPlan) {
+      try {
+        const planData = JSON.parse(savedPlan);
+        setCurrentPlan(planData);
+        console.log('Loaded current plan:', planData);
+        
+        // 将新计划添加到 "All Plans" 中
+        const newPlanItem = {
+          id: 'current-generated-plan',
+          text: `🎯 ${planData.title}`,
+          checked: false,
+          hasSubPlans: true,
+          level: 'master',
+          subPlans: planData.steps.map((step, index) => ({
+            id: `step-${index}`,
+            text: `📅 ${step}`,
+            checked: false,
+            level: 'monthly'
+          }))
+        };
+        
+        setPlans(prev => ({
+          ...prev,
+          'All Plans': [newPlanItem, ...prev['All Plans']]
+        }));
+        
+        // 更新聊天历史，显示欢迎消息
+        setChatHistory(prev => [
+          ...prev,
+          { 
+            sender: 'agent', 
+            text: `欢迎！你的职业转型计划 "${planData.title}" 已经生成完成。我可以帮你跟踪进度和回答问题。` 
+          }
+        ]);
+        
+      } catch (error) {
+        console.error('Error parsing saved plan:', error);
+      }
+    }
+  }, []);
 
   const handleToggle = (planId) => {
     if (selectedType === "Today's Tasks") return; // Don't handle checkbox for today's tasks
@@ -567,6 +613,87 @@ const ViewMyPlan = () => {
       pb: isChatOpen ? 20 : 4,
       background: 'linear-gradient(135deg, rgba(99, 102, 241, 0.01) 0%, rgba(16, 185, 129, 0.01) 100%)'
     }}>
+      {/* Current Plan Display */}
+      {currentPlan && (
+        <Box sx={{ 
+          mt: 4, 
+          mb: 3,
+          p: 3,
+          background: 'linear-gradient(135deg, rgba(255, 107, 53, 0.1) 0%, rgba(255, 107, 53, 0.05) 100%)',
+          borderRadius: 3,
+          border: '2px solid rgba(255, 107, 53, 0.3)',
+          boxShadow: '0 8px 32px rgba(255, 107, 53, 0.15)'
+        }}>
+          <Typography variant="h5" sx={{ 
+            color: '#FF6B35', 
+            fontWeight: 700, 
+            mb: 2,
+            textAlign: 'center'
+          }}>
+            🎯 Current Active Plan
+          </Typography>
+          
+          <Grid container spacing={3}>
+            <Grid item xs={12} md={6}>
+              <Typography variant="h6" sx={{ color: '#FF6B35', mb: 1 }}>
+                {currentPlan.title}
+              </Typography>
+              <Typography variant="body2" sx={{ color: 'rgba(255, 255, 255, 0.8)', mb: 2 }}>
+                {currentPlan.summary}
+              </Typography>
+              <Box sx={{ display: 'flex', gap: 2, flexWrap: 'wrap' }}>
+                <Chip 
+                  label={`Target: ${currentPlan.targetPosition} - ${currentPlan.targetJob}`}
+                  sx={{ 
+                    bgcolor: 'rgba(255, 107, 53, 0.2)', 
+                    color: '#FF6B35',
+                    border: '1px solid rgba(255, 107, 53, 0.3)'
+                  }}
+                />
+                <Chip 
+                  label={`Timeline: ${currentPlan.timeline}`}
+                  sx={{ 
+                    bgcolor: 'rgba(255, 107, 53, 0.2)', 
+                    color: '#FF6B35',
+                    border: '1px solid rgba(255, 107, 53, 0.3)'
+                  }}
+                />
+                <Chip 
+                  label={`Salary: ${currentPlan.estimatedSalary}`}
+                  sx={{ 
+                    bgcolor: 'rgba(255, 107, 53, 0.2)', 
+                    color: '#FF6B35',
+                    border: '1px solid rgba(255, 107, 53, 0.3)'
+                  }}
+                />
+              </Box>
+            </Grid>
+            
+            <Grid item xs={12} md={6}>
+              <Typography variant="h6" sx={{ color: '#FF6B35', mb: 1 }}>
+                Key Steps
+              </Typography>
+              <Box sx={{ maxHeight: 200, overflowY: 'auto' }}>
+                {currentPlan.steps.map((step, index) => (
+                  <Typography 
+                    key={index} 
+                    variant="body2" 
+                    sx={{ 
+                      color: 'rgba(255, 255, 255, 0.8)', 
+                      mb: 1,
+                      pl: 2,
+                      borderLeft: '2px solid rgba(255, 107, 53, 0.5)'
+                    }}
+                  >
+                    {index + 1}. {step}
+                  </Typography>
+                ))}
+              </Box>
+            </Grid>
+          </Grid>
+        </Box>
+      )}
+
       {/* Top Menu */}
       <Box sx={{ 
         display: 'flex', 
