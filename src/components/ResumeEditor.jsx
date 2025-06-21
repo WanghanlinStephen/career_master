@@ -23,6 +23,7 @@ import {
 import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import SendIcon from '@mui/icons-material/Send';
+import { generateCareerPlan, testBackendConnection } from '../api/axios';
 
 // Job Categories List
 const jobCategories = [
@@ -290,32 +291,88 @@ Please review this updated plan. If you're satisfied, click "Confirm Plan". If y
     setMessages(prev => [...prev, assistantMessage]);
   };
 
+  // Test backend connection
+  const testBackend = async () => {
+    try {
+      setLoading(true);
+      const result = await testBackendConnection();
+      console.log('Backend test result:', result);
+      
+      if (result.success) {
+        setSnackbar({
+          open: true,
+          message: result.message,
+          severity: 'success'
+        });
+      } else {
+        setSnackbar({
+          open: true,
+          message: result.message,
+          severity: 'error'
+        });
+      }
+    } catch (error) {
+      console.error('Test failed:', error);
+      setSnackbar({
+        open: true,
+        message: `测试失败: ${error.message}`,
+        severity: 'error'
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
   // Generate plan from backend
   const generatePlanFromBackend = async () => {
     try {
       setLoading(true);
+      console.log('Starting plan generation...');
       
       // Get target position information
       const targetPosition = jobCategories.find(c => c.id === selectedCategory)?.name;
       const targetJob = jobCategories.find(c => c.id === selectedCategory)?.subCategories.find(j => j.value === selectedJob)?.name;
       const fullTargetPosition = `${targetPosition} - ${targetJob}`;
       
-      // Simulate backend call for plan generation
-      setTimeout(() => {
-        const mockPlan = {
-          title: `Your Personalized Career Transition Plan to ${targetJob}`,
-          summary: `Based on your background and interest in transitioning to ${targetJob}, here's your 6-month transition plan:`,
-          steps: [
-            "Month 1-2: Learn Python and machine learning fundamentals",
-            "Month 3-4: Build AI projects and contribute to open source",
-            "Month 5-6: Network with AI professionals and apply for positions"
-          ],
-          timeline: "6 months",
-          estimatedSalary: "$80,000 - $120,000",
-          skillsToDevelop: ["Python", "Machine Learning", "Deep Learning", "Data Analysis"]
+      console.log('Target position info:', { targetPosition, targetJob, fullTargetPosition });
+      
+      // Prepare data for API call
+      const planData = {
+        targetPosition: targetPosition,
+        targetJob: targetJob,
+        timeCommitment: formData.timeCommitment,
+        expectations: formData.expectation,
+        resumeContent: resumeText || customText || "用户简历内容",
+        uploadedFile: file ? {
+          name: file.name,
+          size: file.size,
+          type: file.type
+        } : null
+      };
+
+      console.log('Prepared plan data:', planData);
+
+      // Call backend API
+      console.log('Calling generateCareerPlan API...');
+      const response = await generateCareerPlan(planData);
+      console.log('API response received:', response);
+      
+      if (response.status === 'success' && response.generatedPlan) {
+        const backendPlan = response.generatedPlan;
+        
+        // Transform backend response to our format
+        const transformedPlan = {
+          title: backendPlan.title,
+          summary: backendPlan.summary,
+          steps: backendPlan.steps,
+          timeline: backendPlan.timeline,
+          estimatedSalary: backendPlan.estimatedSalary,
+          skillsToDevelop: backendPlan.skillsToDevelop
         };
         
-        setGeneratedPlan(mockPlan);
+        console.log('Transformed plan:', transformedPlan);
+        
+        setGeneratedPlan(transformedPlan);
         setChatStep('plan_generated');
         
         // Add plan to chat with proper formatting
@@ -324,29 +381,42 @@ Please review this updated plan. If you're satisfied, click "Confirm Plan". If y
           type: 'assistant',
           content: `Here's your personalized career transition plan:
 
-**${mockPlan.title}**
+**${transformedPlan.title}**
 
 **Target Position:** ${fullTargetPosition}
 
-${mockPlan.summary}
+${transformedPlan.summary}
 
 **Key Steps:**
-${mockPlan.steps.map((step, index) => `${index + 1}. ${step}`).join('\n')}
+${transformedPlan.steps.map((step, index) => `${index + 1}. ${step}`).join('\n')}
 
-**Timeline:** ${mockPlan.timeline}
-**Estimated Salary Range:** ${mockPlan.estimatedSalary}
+**Timeline:** ${transformedPlan.timeline}
+**Estimated Salary Range:** ${transformedPlan.estimatedSalary}
 
-**Skills to Develop:** ${mockPlan.skillsToDevelop.join(', ')}
+**Skills to Develop:** ${transformedPlan.skillsToDevelop.join(', ')}
 
 Please review this plan. If you're satisfied, click "Confirm Plan". If you'd like modifications, let me know what you'd like to change.`,
           timestamp: new Date()
         };
         setMessages(prev => [...prev, planMessage]);
-        setLoading(false);
-      }, 3000);
+      } else {
+        console.error('Invalid response format:', response);
+        throw new Error('Invalid response from backend');
+      }
       
     } catch (error) {
-      setError('Failed to generate plan, please try again');
+      console.error('Error in generatePlanFromBackend:', error);
+      setError(`Failed to generate plan: ${error.message}`);
+      
+      // Add error message to chat
+      const errorMessage = {
+        id: Date.now() + 1,
+        type: 'assistant',
+        content: `Sorry, I encountered an error while generating your plan: ${error.message}. Please try again or check your internet connection.`,
+        timestamp: new Date()
+      };
+      setMessages(prev => [...prev, errorMessage]);
+    } finally {
       setLoading(false);
     }
   };
@@ -1153,7 +1223,29 @@ ${resumeContent}Please confirm and generate plans.`,
             
             {/* Generate Plan button - only show when not in plan_generated state */}
             {activeStep === steps.length - 1 && chatStep !== 'plan_generated' && (
-              <Box sx={{ display: 'flex', justifyContent: 'center', mt: 3 }}>
+              <Box sx={{ display: 'flex', justifyContent: 'center', gap: 2, mt: 3 }}>
+                <Button
+                  variant="outlined"
+                  onClick={testBackend}
+                  disabled={loading}
+                  sx={{
+                    borderColor: 'rgba(255, 107, 53, 0.5)',
+                    color: '#FF6B35',
+                    px: 3,
+                    py: 1.5,
+                    fontSize: '1rem',
+                    '&:hover': {
+                      borderColor: '#FF6B35',
+                      backgroundColor: 'rgba(255, 107, 53, 0.1)',
+                    },
+                    '&:disabled': {
+                      borderColor: 'rgba(255, 107, 53, 0.3)',
+                      color: 'rgba(255, 107, 53, 0.5)',
+                    }
+                  }}
+                >
+                  {loading ? 'Testing...' : 'Test Backend'}
+                </Button>
                 <Button
                   variant="contained"
                   onClick={generatePlanFromBackend}
